@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="user-scalable=no, width=device-width, initial-scale=1.0">
+    <title>volumeshader_bm · heavy load</title>
+    <style>
+        body {
+            background: #0b0910;
+            margin: 0;
+            overflow: hidden;
+            font-family: system-ui, -apple-system, sans-serif;
+        }
+        #main {
+            transform-origin: 0px 0px;
+            position: fixed;
+            left: 0px;
+            top: 0px;
+            width: 1024px;
+            height: 1024px;
+            image-rendering: crisp-edges;
+        }
+        #c1 {
+            background: #0f0c14;
+            width: 1024px;
+            height: 1024px;
+            display: block;
+            box-shadow: 0 0 40px rgba(140, 80, 255, 0.15);
+        }
+        #btn {
+            position: fixed;
+            left: 18px;
+            top: 18px;
+            padding: 10px 22px;
+            background: rgba(20, 16, 30, 0.75);
+            backdrop-filter: blur(6px);
+            border: 1px solid #6a4a9a;
+            color: #e6d6ff;
+            font-weight: 600;
+            font-size: 0.9rem;
+            letter-spacing: 1px;
+            border-radius: 40px;
+            cursor: pointer;
+            z-index: 20;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+            transition: 0.2s;
+        }
+        #btn:hover {
+            background: #2c1f3e;
+            border-color: #b18aff;
+            color: white;
+            box-shadow: 0 0 20px #7744cc55;
+        }
+        #config {
+            position: fixed;
+            left: 24px;
+            top: 80px;
+            background: rgba(10, 8, 18, 0.88);
+            backdrop-filter: blur(12px);
+            border: 1px solid #4f3a70;
+            padding: 22px 26px 26px 26px;
+            border-radius: 28px;
+            display: none;
+            z-index: 30;
+            width: min(480px, 80vw);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+        }
+        #config textarea {
+            width: 100%;
+            height: 280px;
+            background: #0d0a16;
+            border: 1px solid #4b3570;
+            color: #d4c8f0;
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            font-size: 13px;
+            padding: 14px;
+            border-radius: 16px;
+            resize: vertical;
+            box-sizing: border-box;
+            tab-size: 3;
+            line-height: 1.5;
+        }
+        #config textarea:focus {
+            outline: none;
+            border-color: #a07cdd;
+            box-shadow: 0 0 0 3px #6a3faa55;
+        }
+        .config-actions {
+            display: flex;
+            gap: 14px;
+            margin-top: 16px;
+            flex-wrap: wrap;
+        }
+        .config-actions button {
+            flex: 1;
+            padding: 12px 10px;
+            background: #1f1730;
+            border: 1px solid #5d4680;
+            color: #d6c6ff;
+            font-weight: 600;
+            border-radius: 40px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: 0.15s;
+            min-width: 80px;
+            letter-spacing: 0.5px;
+        }
+        .config-actions button#apply {
+            background: #412b6a;
+            border-color: #8a6acf;
+            color: white;
+        }
+        .config-actions button#apply:hover {
+            background: #5d3d8f;
+            box-shadow: 0 0 18px #7a4fcf66;
+        }
+        .config-actions button#cancle:hover {
+            background: #2d223f;
+            border-color: #8066b0;
+        }
+        #stats {
+            position: fixed;
+            bottom: 18px;
+            right: 24px;
+            color: #a594c9;
+            font-size: 0.8rem;
+            background: #100d1a80;
+            backdrop-filter: blur(4px);
+            padding: 6px 16px;
+            border-radius: 40px;
+            border: 1px solid #3e2d5a;
+            font-family: monospace;
+            letter-spacing: 0.3px;
+            pointer-events: none;
+            z-index: 10;
+        }
+        @media (max-width: 600px) {
+            #config {
+                left: 10px;
+                right: 10px;
+                width: auto;
+                top: 70px;
+                padding: 16px;
+            }
+            #config textarea {
+                height: 200px;
+                font-size: 12px;
+            }
+            #btn {
+                left: 12px;
+                top: 12px;
+                padding: 8px 18px;
+                font-size: 0.8rem;
+            }
+        }
+    </style>
+</head>
+<body>
+<div id="main">
+    <canvas id="c1" width="1024" height="1024">
+        <span>您的浏览器不支持 Canvas</span>
+    </canvas>
+</div>
+<button id="btn">⚙ CONFIG</button>
+<div id="config">
+    <textarea id="kernel" spellcheck="false"></textarea>
+    <div class="config-actions">
+        <button id="apply">✔ APPLY</button>
+        <button id="cancle">↺ CANCEL</button>
+    </div>
+</div>
+<div id="stats">⚡ 50x · heavy</div>
+
+<script>
+    // ============ 超重型渲染: 同一个模型迭代 50 次 (体积着色器) ============
+    alert("trigonometric and inverse trigonometric functions test.\ncreated by Darkboyyyyyyyy · 50x heavy");
+
+    var cx, cy;
+    var glposition, glright, glforward, glup, glorigin, glx, gly, gllen;
+    var canvas, gl;
+    var date = new Date();
+    var md = 0, mx, my;
+    var t2, t1 = date.getTime();
+    var mx = 0, my = 0, mx1 = 0, my1 = 0, lasttimen = 0;
+    var ml = 0, mr = 0, mm = 0;
+    var len = 1.6;
+    var ang1 = 2.8;
+    var ang2 = 0.4;
+    var cenx = 0.0, ceny = 0.0, cenz = 0.0;
+
+    // ---------- 核心 KERNEL (原始模型) ----------
+    var KERNEL = "float kernal(vec3 ver){\n" +
+        "   vec3 a;\n" +
+        "   float b,c,d,e;\n" +
+        "   a = ver;\n" +
+        "   for(int i=0; i<5; i++){\n" +
+        "       b = length(a);\n" +
+        "       c = atan(a.y, a.x) * 8.0;\n" +
+        "       e = 1.0 / b;\n" +
+        "       d = acos(a.z / b) * 8.0;\n" +
+        "       b = pow(b, 8.0);\n" +
+        "       a = vec3(b * sin(d) * cos(c), b * sin(d) * sin(c), b * cos(d)) + ver;\n" +
+        "       if(b > 6.0) break;\n" +
+        "   }\n" +
+        "   return 4.0 - a.x*a.x - a.y*a.y - a.z*a.z;\n" +
+        "}";
+
+    var vertshade, fragshader, shaderProgram;
+
+    // ---------- 鼠标/触摸交互 ----------
+    document.addEventListener("mousedown", function (ev) {
+        var e = ev || event;
+        if (e.button == 0) { ml = 1; mm = 0; }
+        if (e.button == 2) { mr = 1; mm = 0; }
+        mx = e.clientX; my = e.clientY;
+    }, false);
+    document.addEventListener("mouseup", function (ev) {
+        var e = ev || event;
+        if (e.button == 0) ml = 0;
+        if (e.button == 2) mr = 0;
+    }, false);
+    document.addEventListener("mousemove", function (ev) {
+        var e = ev || event;
+        if (ml == 1) {
+            ang1 += (e.clientX - mx) * 0.002;
+            ang2 += (e.clientY - my) * 0.002;
+            if (e.clientX != mx || e.clientY != my) mm = 1;
+        }
+        if (mr == 1) {
+            var l = len * 4.0 / (cx + cy);
+            cenx += l * (-(e.clientX - mx) * Math.sin(ang1) - (e.clientY - my) * Math.sin(ang2) * Math.cos(ang1));
+            ceny += l * ((e.clientY - my) * Math.cos(ang2));
+            cenz += l * ((e.clientX - mx) * Math.cos(ang1) - (e.clientY - my) * Math.sin(ang2) * Math.sin(ang1));
+            if (e.clientX != mx || e.clientY != my) mm = 1;
+        }
+        mx = e.clientX; my = e.clientY;
+    }, false);
+    document.addEventListener("mousewheel", function (ev) {
+        ev.preventDefault();
+        var e = ev || event;
+        len *= Math.exp(-0.001 * e.wheelDelta);
+    }, false);
+
+    // touch
+    document.addEventListener("touchstart", function (ev) {
+        var n = ev.touches.length;
+        if (n == 1) { var e = ev.touches[0]; mx = e.clientX; my = e.clientY; }
+        else if (n == 2) { var e = ev.touches[0]; mx = e.clientX; my = e.clientY; var e2 = ev.touches[1]; mx1 = e2.clientX; my1 = e2.clientY; }
+        lasttimen = n;
+    }, false);
+    document.addEventListener("touchend", function (ev) {
+        var n = ev.touches.length;
+        if (n == 1) { var e = ev.touches[0]; mx = e.clientX; my = e.clientY; }
+        else if (n == 2) { var e = ev.touches[0]; mx = e.clientX; my = e.clientY; var e2 = ev.touches[1]; mx1 = e2.clientX; my1 = e2.clientY; }
+        lasttimen = n;
+    }, false);
+    document.addEventListener("touchmove", function (ev) {
+        ev.preventDefault();
+        var n = ev.touches.length;
+        if (n == 1 && lasttimen == 1) {
+            var e = ev.touches[0];
+            ang1 += (e.clientX - mx) * 0.002;
+            ang2 += (e.clientY - my) * 0.002;
+            mx = e.clientX; my = e.clientY;
+        } else if (n == 2) {
+            var e = ev.touches[0], e2 = ev.touches[1];
+            var l = len * 2.0 / (cx + cy);
+            cenx += l * (-(e.clientX + e2.clientX - mx - mx1) * Math.sin(ang1) - (e.clientY + e2.clientY - my - my1) * Math.sin(ang2) * Math.cos(ang1));
+            ceny += l * ((e.clientY + e2.clientY - my - my1) * Math.cos(ang2));
+            cenz += l * ((e.clientX + e2.clientX - mx - mx1) * Math.cos(ang1) - (e.clientY + e2.clientY - my - my1) * Math.sin(ang2) * Math.sin(ang1));
+            var l1 = Math.sqrt((mx - mx1) * (mx - mx1) + (my - my1) * (my - my1) + 1.0);
+            mx = e.clientX; my = e.clientY; mx1 = e2.clientX; my1 = e2.clientY;
+            var l2 = Math.sqrt((mx - mx1) * (mx - mx1) + (my - my1) * (my - my1) + 1.0);
+            len *= l1 / l2;
+        }
+        lasttimen = n;
+    }, false);
+    document.oncontextmenu = function (event) { if (mm == 1) event.preventDefault(); };
+
+    // ---------- 绘制 ----------
+    function draw() {
+        date = new Date();
+        t2 = date.getTime();
+        t1 = t2;
+
+        gl.uniform1f(glx, cx * 2.0 / (cx + cy));
+        gl.uniform1f(gly, cy * 2.0 / (cx + cy));
+        gl.uniform1f(gllen, len);
+        gl.uniform3f(glorigin,
+            len * Math.cos(ang1) * Math.cos(ang2) + cenx,
+            len * Math.sin(ang2) + ceny,
+            len * Math.sin(ang1) * Math.cos(ang2) + cenz
+        );
+        gl.uniform3f(glright, Math.sin(ang1), 0, -Math.cos(ang1));
+        gl.uniform3f(glup, -Math.sin(ang2) * Math.cos(ang1), Math.cos(ang2), -Math.sin(ang2) * Math.sin(ang1));
+        gl.uniform3f(glforward, -Math.cos(ang1) * Math.cos(ang2), -Math.sin(ang2), -Math.sin(ang1) * Math.cos(ang2));
+        gl.drawArrays(gl.TRIANGLES, 0, 6);
+        gl.finish();
+    }
+
+    // ---------- 窗口resize ----------
+    window.onresize = function () {
+        cx = document.body.clientWidth;
+        cy = document.body.clientHeight;
+        if (cx > cy) cx = cy; else cy = cx;
+        document.getElementById("main").style.width = 1024 + "px";
+        document.getElementById("main").style.height = 1024 + "px";
+        document.getElementById("main").style.transform = "scale(" + cx / 1024 + "," + cy / 1024 + ")";
+    };
+
+    // ---------- onload ----------
+    window.onload = function () {
+        cx = document.body.clientWidth;
+        cy = document.body.clientHeight;
+        if (cx > cy) cx = cy; else cy = cx;
+        document.getElementById("main").style.width = 1024 + "px";
+        document.getElementById("main").style.height = 1024 + "px";
+        document.getElementById("main").style.transform = "scale(" + cx / 1024 + "," + cy / 1024 + ")";
+
+        var positions = [-1.0, -1.0, 0.0, 1.0, -1.0, 0.0, 1.0, 1.0, 0.0, -1.0, -1.0, 0.0, 1.0, 1.0, 0.0, -1.0, 1.0, 0.0];
+
+        // VERTEX SHADER (标准)
+        var VSHADER_SOURCE =
+            "#version 100 \n" +
+            "precision highp float;\n" +
+            "attribute vec4 position;\n" +
+            "varying vec3 dir, localdir;\n" +
+            "uniform vec3 right, forward, up, origin;\n" +
+            "uniform float x, y;\n" +
+            "void main() {\n" +
+            "   gl_Position = position;\n" +
+            "   dir = forward + right * position.x * x + up * position.y * y;\n" +
+            "   localdir.x = position.x * x;\n" +
+            "   localdir.y = position.y * y;\n" +
+            "   localdir.z = -1.0;\n" +
+            "}";
+
+        // ========== 关键: FRAGMENT SHADER 重复 50 次相同模型 ==========
+        // 我们构建一个宏，将 KERNEL 展开 50 次，但每次调用相同的 kernal，但为了 "重载" 我们重复 50 次计算流程
+        // 实际上我们将在 main 中重复 50 次相同的采样/求交逻辑，使 GPU 负载飙升
+        // 但为了保持代码可读，我们使用循环展开 (手动 50 次)
+        var REPEAT_COUNT = 50;
+        var repeatedCode = "";
+        for (var i = 0; i < REPEAT_COUNT; i++) {
+            // 每次重复相同的体积步进 + 着色逻辑，但只取最后一次结果 (或者累加? 为了重载我们累加颜色)
+            // 这样 GPU 会执行 50 倍计算量
+            repeatedCode += `
+            // ---- 重复块 ${i} ----
+            {
+                float v_${i}, v1_${i}, v2_${i};
+                vec3 ver_${i};
+                int sign_${i} = 0;
+                float r1_${i}, r2_${i}, r3_${i}, r4_${i}, m1_${i}, m2_${i}, m3_${i}, m4_${i};
+                vec3 n_${i}, reflect_${i};
+                v1_${i} = kernal(origin + dir * (step*len));
+                v2_${i} = kernal(origin);
+                for (int k = 2; k < 1002; k++) {
+                    ver_${i} = origin + dir * (step*len*float(k));
+                    float vv = kernal(ver_${i});
+                    if (vv > 0.0 && v1_${i} < 0.0) {
+                        r1_${i} = step * len*float(k-1);
+                        r2_${i} = step * len*float(k);
+                        m1_${i} = kernal(origin + dir * r1_${i});
+                        m2_${i} = kernal(origin + dir * r2_${i});
+                        for (int l = 0; l < SOLVER; l++) {
+                            r3_${i} = r1_${i}*0.5 + r2_${i}*0.5;
+                            m3_${i} = kernal(origin + dir * r3_${i});
+                            if (m3_${i} > 0.0) { r2_${i} = r3_${i}; m2_${i} = m3_${i}; }
+                            else { r1_${i} = r3_${i}; m1_${i} = m3_${i}; }
+                        }
+                        if (r3_${i} < 2.0*len) { sign_${i}=1; break; }
+                    }
+                    if (vv < v1_${i} && v1_${i} > v2_${i} && v1_${i} < 0.0 && (v1_${i}*2.0 > vv || v1_${i}*2.0 > v2_${i})) {
+                        r1_${i} = step * len*float(k-2);
+                        r2_${i} = step * len*(float(k)-2.0+2.0*M_L);
+                        r3_${i} = step * len*(float(k)-2.0+2.0*M_R);
+                        r4_${i} = step * len*float(k);
+                        m2_${i} = kernal(origin + dir * r2_${i});
+                        m3_${i} = kernal(origin + dir * r3_${i});
+                        for (int l = 0; l < MAXR; l++) {
+                            if (m2_${i} > m3_${i}) {
+                                r4_${i} = r3_${i}; r3_${i} = r2_${i};
+                                r2_${i} = r4_${i}*M_L + r1_${i}*M_R;
+                                m3_${i} = m2_${i};
+                                m2_${i} = kernal(origin + dir * r2_${i});
+                            } else {
+                                r1_${i} = r2_${i}; r2_${i} = r3_${i};
+                                r3_${i} = r4_${i}*M_R + r1_${i}*M_L;
+                                m2_${i} = m3_${i};
+                                m3_${i} = kernal(origin + dir * r3_${i});
+                            }
+                        }
+                        if (m2_${i} > 0.0) {
+                            r1_${i} = step * len*float(k-2);
+                            r2_${i} = r2_${i};
+                            m1_${i} = kernal(origin + dir * r1_${i});
+                            m2_${i} = kernal(origin + dir * r2_${i});
+                            for (int l = 0; l < SOLVER; l++) {
+                                r3_${i} = r1_${i}*0.5 + r2_${i}*0.5;
+                                m3_${i} = kernal(origin + dir * r3_${i});
+                                if (m3_${i} > 0.0) { r2_${i} = r3_${i}; m2_${i} = m3_${i}; }
+                                else { r1_${i} = r3_${i}; m1_${i} = m3_${i}; }
+                            }
+                            if (r3_${i} < 2.0*len && r3_${i} > step*len) { sign_${i}=1; break; }
+                        } else if (m3_${i} > 0.0) {
+                            r1_${i} = step * len*float(k-2);
+                            r2_${i} = r3_${i};
+                            m1_${i} = kernal(origin + dir * r1_${i});
+                            m2_${i} = kernal(origin + dir * r2_${i});
+                            for (int l = 0; l < SOLVER; l++) {
+                                r3_${i} = r1_${i}*0.5 + r2_${i}*0.5;
+                                m3_${i} = kernal(origin + dir * r3_${i});
+                                if (m3_${i} > 0.0) { r2_${i} = r3_${i}; m2_${i} = m3_${i}; }
+                                else { r1_${i} = r3_${i}; m1_${i} = m3_${i}; }
+                            }
+                            if (r3_${i} < 2.0*len && r3_${i} > step*len) { sign_${i}=1; break; }
+                        }
+                    }
+                    v2_${i} = v1_${i};
+                    v1_${i} = vv;
+                }
+                // 如果命中，累加颜色 (每个重复块都贡献)
+                if (sign_${i} == 1) {
+                    vec3 hitPos_${i} = origin + dir * r3_${i};
+                    float rLen_${i} = dot(hitPos_${i}, hitPos_${i});
+                    vec3 nrm_${i};
+                    nrm_${i}.x = kernal(hitPos_${i} - right * (r3_${i}*0.00025)) - kernal(hitPos_${i} + right * (r3_${i}*0.00025));
+                    nrm_${i}.y = kernal(hitPos_${i} - up * (r3_${i}*0.00025)) - kernal(hitPos_${i} + up * (r3_${i}*0.00025));
+                    nrm_${i}.z = kernal(hitPos_${i} + forward * (r3_${i}*0.00025)) - kernal(hitPos_${i} - forward * (r3_${i}*0.00025));
+                    float nrLen_${i} = length(nrm_${i});
+                    nrm_${i} = nrm_${i} / nrLen_${i};
+                    vec3 viewDir_${i} = normalize(localdir);
+                    vec3 refl_${i} = nrm_${i} * (-2.0*dot(viewDir_${i}, nrm_${i})) + viewDir_${i};
+                    float spec_${i} = max(0.0, dot(refl_${i}, vec3(0.276, 0.920, 0.276)));
+                    spec_${i} = spec_${i} * spec_${i} * spec_${i} * spec_${i};
+                    float diff_${i} = max(0.0, dot(nrm_${i}, vec3(0.276, 0.920, 0.276)));
+                    float shade_${i} = spec_${i} * 0.45 + diff_${i} * 0.25 + 0.3;
+                    vec3 col_${i} = vec3(
+                        sin(rLen_${i}*10.0)*0.5+0.5,
+                        sin(rLen_${i}*10.0+2.05)*0.5+0.5,
+                        sin(rLen_${i}*10.0-2.05)*0.5+0.5
+                    ) * shade_${i};
+                    // 累加颜色 (重载)
+                    color += col_${i} * 0.02;  // 50次累加后归一化
+                }
+            }
+            `;
+        }
+
+        // 构建最终 fragment shader (包含 50 次重复)
+        var FSHADER_SOURCE =
+            "#version 100 \n" +
+            "#define PI 3.14159265358979324\n" +
+            "#define M_L 0.3819660113\n" +
+            "#define M_R 0.6180339887\n" +
+            "#define MAXR 8\n" +
+            "#define SOLVER 8\n" +
+            "precision highp float;\n" +
+            "float kernal(vec3 ver);\n" +
+            "uniform vec3 right, forward, up, origin;\n" +
+            "varying vec3 dir, localdir;\n" +
+            "uniform float len;\n" +
+            "const float step = 0.002;\n" +
+            "vec3 color;\n" +
+            "void main() {\n" +
+            "   color = vec3(0.0);\n" +
+            repeatedCode +
+            "   gl_FragColor = vec4(color, 1.0);\n" +
+            "}";
+
+        // ========== 初始化 WebGL ==========
+        canvas = document.getElementById('c1');
+        gl = canvas.getContext('webgl', { antialias: false, depth: false, stencil: false, alpha: false });
+        if (!gl) { alert("WebGL not supported"); return; }
+
+        vertshade = gl.createShader(gl.VERTEX_SHADER);
+        fragshader = gl.createShader(gl.FRAGMENT_SHADER);
+        shaderProgram = gl.createProgram();
+
+        gl.shaderSource(vertshade, VSHADER_SOURCE);
+        gl.compileShader(vertshade);
+        var infov = gl.getShaderInfoLog(vertshade);
+
+        var fullFrag = FSHADER_SOURCE + KERNEL;
+        gl.shaderSource(fragshader, fullFrag);
+        gl.compileShader(fragshader);
+        var infof = gl.getShaderInfoLog(fragshader);
+
+        gl.attachShader(shaderProgram, vertshade);
+        gl.attachShader(shaderProgram, fragshader);
+        gl.linkProgram(shaderProgram);
+        gl.useProgram(shaderProgram);
+
+        if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
+            var info = gl.getProgramInfoLog(shaderProgram);
+            throw 'WebGL link error: \n' + infov + infof + info;
+        }
+
+        glposition = gl.getAttribLocation(shaderProgram, 'position');
+        glright = gl.getUniformLocation(shaderProgram, 'right');
+        glforward = gl.getUniformLocation(shaderProgram, 'forward');
+        glup = gl.getUniformLocation(shaderProgram, 'up');
+        glorigin = gl.getUniformLocation(shaderProgram, 'origin');
+        glx = gl.getUniformLocation(shaderProgram, 'x');
+        gly = gl.getUniformLocation(shaderProgram, 'y');
+        gllen = gl.getUniformLocation(shaderProgram, 'len');
+
+        var buffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
+        gl.vertexAttribPointer(glposition, 3, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(glposition);
+
+        gl.viewport(0, 0, 1024, 1024);
+        draw();
+
+        // 动画循环
+        function animate() {
+            draw();
+            window.requestAnimationFrame(animate);
+        }
+        animate();
+
+        // ---------- CONFIG UI ----------
+        document.getElementById("kernel").value = KERNEL;
+        document.getElementById("btn").addEventListener("click", function() {
+            var state = this.innerText.includes("CONFIG");
+            this.innerText = state ? "✕ HIDE" : "⚙ CONFIG";
+            document.getElementById("config").style.display = state ? "inline" : "none";
+        });
+        document.getElementById("apply").addEventListener("click", function() {
+            KERNEL = document.getElementById("kernel").value;
+            var newFrag = FSHADER_SOURCE + KERNEL;
+            gl.shaderSource(fragshader, newFrag);
+            gl.compileShader(fragshader);
+            var infof2 = gl.getShaderInfoLog(fragshader);
+            gl.linkProgram(shaderProgram);
+            gl.useProgram(shaderProgram);
+            if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
+                var info2 = gl.getProgramInfoLog(shaderProgram);
+                alert("Compile error:\n" + infof2 + info2);
+            }
+            // 重新获取 uniform 位置
+            glposition = gl.getAttribLocation(shaderProgram, 'position');
+            glright = gl.getUniformLocation(shaderProgram, 'right');
+            glforward = gl.getUniformLocation(shaderProgram, 'forward');
+            glup = gl.getUniformLocation(shaderProgram, 'up');
+            glorigin = gl.getUniformLocation(shaderProgram, 'origin');
+            glx = gl.getUniformLocation(shaderProgram, 'x');
+            gly = gl.getUniformLocation(shaderProgram, 'y');
+            gllen = gl.getUniformLocation(shaderProgram, 'len');
+            // 重新绑定 buffer
+            gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+            gl.vertexAttribPointer(glposition, 3, gl.FLOAT, false, 0, 0);
+            gl.enableVertexAttribArray(glposition);
+        });
+        document.getElementById("cancle").addEventListener("click", function() {
+            document.getElementById("kernel").value = KERNEL;
+        });
+    };
+</script>
+</body>
+</html>
